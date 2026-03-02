@@ -1,0 +1,25 @@
+# Dependencies
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+backend/*.egg-info/
+backend/.pytest_cache/
+
+# Env files (keep .env.example, not real .env)
+backend/.env
+backend/infra/.env
+frontend/.env
+# Uncomment or add other .env paths as needed
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/

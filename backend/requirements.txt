@@ -1,0 +1,48 @@
+# Auth (OTP + JWT)
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+email-validator==2.1.0
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.10
+pgvector==0.3.6
+
+# AWS
+boto3==1.35.0
+
+# Config
+python-dotenv==1.0.1
+
+# PDF
+pypdf==5.1.0
+
+# LangChain + LangGraph
+langchain==0.3.7
+langchain-core==0.3.17
+langchain-community==0.3.7
+langchain-aws==0.2.4
+langgraph==0.2.45
+langchain-text-splitters==0.3.2
+
+# Data / ML
+numpy==1.26.4
+scipy==1.13.1
+scikit-learn==1.5.2
+pandas==2.2.3
+
+# Async
+aiohttp==3.10.10
+httpx==0.27.2
+
+# Pydantic
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# Serialization
+orjson==3.10.7
