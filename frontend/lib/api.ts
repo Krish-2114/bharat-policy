@@ -1,5 +1,4 @@
 import { Policy, Clause } from '@/types/policy';
-import { Source } from '@/types/chat';
 import { getToken } from './auth';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
@@ -66,25 +65,6 @@ export async function uploadPolicy(
     message: data.message || `Policy "${title}" uploaded successfully.`,
     policy_id: data.policy_id,
     clause_count: data.clause_count,
-  };
-}
-
-// ─── Query ────────────────────────────────────────────────────────────────────
-
-export async function queryPolicies(
-  query: string
-): Promise<{ answer: string; sources: Source[] }> {
-  const res = await fetch(`${API_BASE_URL}/query`, {
-    method: 'POST',
-    headers: authHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ query }),
-  });
-
-  if (!res.ok) throw new Error(`Query failed: ${res.statusText}`);
-  const data = await res.json();
-  return {
-    answer: data.answer || data.response || data.result || (typeof data === 'string' ? data : JSON.stringify(data)),
-    sources: data.sources || [],
   };
 }
 

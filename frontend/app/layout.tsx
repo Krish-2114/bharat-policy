@@ -6,7 +6,6 @@ import ErrorBoundaryWrapper from '@/components/ErrorBoundary';
 import ToastContainer from '@/components/ui/Toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
-import FloatingChatbot from '@/components/ui/FloatingChatbot';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -30,7 +29,6 @@ export default function RootLayout({
           <ErrorBoundaryWrapper>
             <AuthProvider>
               <DashboardLayout>{children}</DashboardLayout>
-              <FloatingChatbot />
             </AuthProvider>
           </ErrorBoundaryWrapper>
         </ThemeProvider>

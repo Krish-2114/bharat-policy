@@ -27,8 +27,15 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isLoading) {
-      if (!isAuthenticated && !isPublicPage) {
-        router.push('/login');
+      if (!isAuthenticated) {
+        if (!isPublicPage) {
+          router.push('/login');
+        }
+      } else {
+        // If authenticated and on landing/login/signup, go to dashboard
+        if (isPublicPage) {
+          router.push('/dashboard');
+        }
       }
     }
   }, [isAuthenticated, isLoading, isPublicPage, router]);
@@ -55,7 +62,6 @@ export default function DashboardLayout({
     );
   }
 
-  const isQueryPage = pathname === '/query';
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "var(--bg-base)" }}>

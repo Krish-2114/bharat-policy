@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   FileText, Database, Clock, BarChart3,
   TrendingUp, Zap, Layers, UploadCloud,
-  Search, MessageSquare, ArrowRight,
-  ShieldCheck, Network
+  ArrowRight, ShieldCheck, Network, Sparkles
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
@@ -13,19 +12,18 @@ import {
 } from 'recharts';
 import { getPolicies, getPolicyClauses } from '@/lib/api';
 import { uploadHistoryManager } from '@/lib/uploadHistory';
-import { chatHistoryManager } from '@/lib/chatHistory';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 
-// Mock Data for Charts (Enhanced for demonstration)
-const queryData = [
-  { time: '00:00', queries: 12 },
-  { time: '04:00', queries: 8 },
-  { time: '08:00', queries: 45 },
-  { time: '12:00', queries: 85 },
-  { time: '16:00', queries: 110 },
-  { time: '20:00', queries: 62 },
-  { time: '24:00', queries: 30 },
+// Mock Data for Charts
+const activityData = [
+  { time: '00:00', value: 12 },
+  { time: '04:00', value: 8 },
+  { time: '08:00', value: 45 },
+  { time: '12:00', value: 85 },
+  { time: '16:00', value: 110 },
+  { time: '20:00', value: 62 },
+  { time: '24:00', value: 30 },
 ];
 
 export default function DashboardOverview() {
@@ -34,7 +32,6 @@ export default function DashboardOverview() {
   const [clauseCount, setClauseCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentUploads, setRecentUploads] = useState<{ title: string, filename: string, size: string }[]>([]);
-  const [recentQueries, setRecentQueries] = useState<{ id: string, title: string }[]>([]);
   const [policyCoverageData, setPolicyCoverageData] = useState<{ name: string, clauses: number }[]>([]);
 
   useEffect(() => {
@@ -54,23 +51,19 @@ export default function DashboardOverview() {
             totalClauses += clauses.length;
             coverageData.push({
               name: policies[index].title.substring(0, 15) + '...',
-              clauses: clauses.length || (policies[index].id * 37 % 200) + 50 // Deterministic fallback based on policy id
+              clauses: clauses.length || (policies[index].id * 37 % 200) + 50
             });
           });
 
           setClauseCount(totalClauses);
-          setPolicyCoverageData(coverageData.slice(0, 5)); // Show top 5
+          setPolicyCoverageData(coverageData.slice(0, 5));
         } catch (error) {
           console.error(error);
           setClauseCount(0);
         }
 
-        // Load History
         const uploads = uploadHistoryManager.getUploads().slice(0, 3);
         setRecentUploads(uploads);
-
-        const queries = chatHistoryManager.getSessions().slice(0, 3);
-        setRecentQueries(queries);
 
       } catch (error) {
         console.error('Failed to load dashboard stats', error);
@@ -88,7 +81,7 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Policies" value={loading ? '—' : policyCount ?? 0} icon={FileText} trend="+2 this week" color="blue" />
         <StatCard title="Clauses Indexed" value={loading ? '—' : clauseCount ?? 0} icon={Database} trend="Vectorized & Ready" color="cyan" />
-        <StatCard title="Queries Executed" value={loading ? '—' : (recentQueries.length * 14 + 156)} icon={MessageSquare} trend="+12% activity" color="emerald" />
+        <StatCard title="Task Analytics" value={loading ? '—' : 156} icon={Zap} trend="+12% activity" color="emerald" />
         <StatCard title="Avg Latency" value="0.9s" icon={Clock} trend="P99 < 1.2s" color="purple" />
       </div>
 
@@ -115,25 +108,24 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* SECTION 3 & 4: Query Activity & DB Status */}
+        {/* SECTION 3 & 4: Intelligence Activity & DB Status */}
         <div className="flex flex-col gap-6">
           <div className="p-6 rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl relative overflow-hidden flex-1">
             <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/5 to-transparent pointer-events-none" />
             <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-cyan-400" />
-              Query Activity (24h)
+              Intelligence Activity (24h)
             </h3>
             <div className="h-[120px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={queryData}>
+                <LineChart data={activityData}>
                   <Tooltip cursor={{ stroke: '#ffffff20' }} contentStyle={{ backgroundColor: '#0F172A', border: '1px solid #ffffff20', borderRadius: '8px' }} />
-                  <Line type="monotone" dataKey="queries" stroke="#06b6d4" strokeWidth={3} dot={false} />
+                  <Line type="monotone" dataKey="value" stroke="#06b6d4" strokeWidth={3} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Section 4: Vector DB Status */}
           <div className="p-5 rounded-2xl bg-gradient-to-br from-[#111827] to-[#0c0414] border border-white/10 shadow-xl relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 p-4 opacity-10"><Database className="w-20 h-20" /></div>
             <div className="flex justify-between items-start mb-4 relative z-10">
@@ -159,7 +151,6 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* SECTION 10: Architecture Visualization */}
       <div className="p-6 rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/10 via-purple-900/10 to-cyan-900/10 pointer-events-none" />
         <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-6">Neural Pipeline Architecture</h3>
@@ -177,8 +168,6 @@ export default function DashboardOverview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* SECTION 5: Recent Policies */}
         <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -198,7 +187,7 @@ export default function DashboardOverview() {
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <Link href="/policies" className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium text-gray-300 transition">View</Link>
-                  <Link href="/query" className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition">Query</Link>
+                  <Link href="/agents" className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition">Analyze</Link>
                 </div>
               </div>
             )) : (
@@ -207,10 +196,7 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* SECTION 7, 8, 9: Status & Quick Actions */}
         <div className="space-y-6">
-
-          {/* Section 7 & 8 */}
           <div className="p-6 rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl">
             <h3 className="text-sm font-semibold text-gray-300 mb-4">System Processing Status</h3>
             <div className="space-y-3">
@@ -221,7 +207,6 @@ export default function DashboardOverview() {
             </div>
           </div>
 
-          {/* Section 9 */}
           <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-900/30 to-purple-900/30 backdrop-blur-xl border border-blue-500/20 shadow-xl relative overflow-hidden">
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/20 blur-3xl rounded-full pointer-events-none" />
             <h3 className="text-sm font-semibold text-white mb-4">Quick Actions</h3>
@@ -230,9 +215,9 @@ export default function DashboardOverview() {
                 <UploadCloud className="w-5 h-5 text-blue-400 block mb-2 group-hover:-translate-y-1 transition-transform" />
                 <span className="text-xs font-medium text-white">Upload</span>
               </Link>
-              <Link href="/query" className="flex flex-col items-center justify-center p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all text-center group cursor-pointer">
-                <Search className="w-5 h-5 text-cyan-400 block mb-2 group-hover:-translate-y-1 transition-transform" />
-                <span className="text-xs font-medium text-white">Query</span>
+              <Link href="/tasks" className="flex flex-col items-center justify-center p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all text-center group cursor-pointer">
+                <Sparkles className="w-5 h-5 text-cyan-400 block mb-2 group-hover:-translate-y-1 transition-transform" />
+                <span className="text-xs font-medium text-white">Tasks</span>
               </Link>
               <Link href="/agents" className="flex flex-col items-center justify-center p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all text-center group cursor-pointer">
                 <Zap className="w-5 h-5 text-purple-400 block mb-2 group-hover:-translate-y-1 transition-transform" />
@@ -244,11 +229,9 @@ export default function DashboardOverview() {
               </Link>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* NEW SECTION: Agent Suite Overview */}
       <div className="p-6 rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl">
         <div className="flex justify-between items-center mb-5">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -260,19 +243,19 @@ export default function DashboardOverview() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
-            { name: 'Policy Analyst', emoji: '📄', color: 'blue' },
-            { name: 'Compliance', emoji: '⚖️', color: 'amber' },
-            { name: 'Gap Analysis', emoji: '🔎', color: 'purple' },
-            { name: 'Risk Assessment', emoji: '🚨', color: 'red' },
-            { name: 'Impact Simulation', emoji: '🧪', color: 'emerald' },
-            { name: 'Amendment Draft', emoji: '✏️', color: 'violet' },
-            { name: 'Stakeholders', emoji: '👥', color: 'orange' },
-            { name: 'Conflict Detection', emoji: '⚡', color: 'yellow' },
-            { name: 'Knowledge Graph', emoji: '🕸️', color: 'teal' },
-            { name: 'Task Router', emoji: '🤖', color: 'cyan' },
-            { name: 'LangGraph Flow', emoji: '🔀', color: 'indigo' },
-            { name: 'Comparison', emoji: '🔄', color: 'blue' },
-            { name: 'Memory Agent', emoji: '🧠', color: 'purple' },
+            { name: 'Policy Analyst', emoji: '📄' },
+            { name: 'Compliance', emoji: '⚖️' },
+            { name: 'Gap Analysis', emoji: '🔎' },
+            { name: 'Risk Assessment', emoji: '🚨' },
+            { name: 'Impact Simulation', emoji: '🧪' },
+            { name: 'Amendment Draft', emoji: '✏️' },
+            { name: 'Stakeholders', emoji: '👥' },
+            { name: 'Conflict Detection', emoji: '⚡' },
+            { name: 'Knowledge Graph', emoji: '🕸️' },
+            { name: 'Task Router', emoji: '🤖' },
+            { name: 'LangGraph Flow', emoji: '🔀' },
+            { name: 'Comparison', emoji: '🔄' },
+            { name: 'Memory Agent', emoji: '🧠' },
           ].map((agent) => (
             <div key={agent.name} className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
               <span className="text-base">{agent.emoji}</span>
@@ -281,12 +264,10 @@ export default function DashboardOverview() {
           ))}
         </div>
       </div>
-
     </div>
   );
 }
 
-// Helpers
 function StatCard({ title, value, icon: Icon, trend, color }: { title: string, value: string | number, icon: React.ElementType, trend: string, color: 'blue' | 'cyan' | 'purple' | 'emerald' }) {
   const colorMap = {
     blue: 'from-blue-500/10 to-transparent border-blue-500/20 text-blue-400',

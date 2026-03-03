@@ -5,15 +5,10 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   FileText,
-  MessageSquare,
   UploadCloud,
   Shield,
   X,
   Sidebar as SidebarIcon,
-  Plus,
-  MessageSquare as ChatIcon,
-  Trash2,
-  Edit2,
   Bot,
   GitBranch,
   BarChart3,
@@ -22,12 +17,10 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import { chatHistoryManager, ChatSession } from '@/lib/chatHistory';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Policies', href: '/policies', icon: FileText },
-  { name: 'Query', href: '/query', icon: MessageSquare },
   { name: 'Upload', href: '/upload', icon: UploadCloud },
   { name: 'Agents', href: '/agents', icon: Bot },
   { name: 'Orchestrator', href: '/orchestrator', icon: GitBranch },
@@ -45,7 +38,6 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const isQueryPage = pathname === '/query';
   const { isDark } = useTheme();
 
   // Drag to resize state
@@ -86,44 +78,9 @@ export default function Sidebar({
     if (isCollapsed) setIsCollapsed(false);
   };
 
-  // Chat History State
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-
   useEffect(() => {
     setIsOpen(false);
   }, [pathname, setIsOpen]);
-
-  // Load chat history if on query page
-  useEffect(() => {
-    if (!isQueryPage) return;
-    const loadSessions = () => setSessions(chatHistoryManager.getSessions());
-    loadSessions();
-    window.addEventListener('chatHistoryUpdated', loadSessions);
-    return () => window.removeEventListener('chatHistoryUpdated', loadSessions);
-  }, [isQueryPage]);
-
-  // Chat History Handlers
-  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    chatHistoryManager.deleteSession(id);
-  };
-  const startEditing = (session: ChatSession, e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setEditingId(session.id);
-    setEditTitle(session.title);
-  };
-  const saveEditing = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (editTitle.trim()) {
-      chatHistoryManager.renameSession(id, editTitle.trim());
-    }
-    setEditingId(null);
-  };
 
   return (
     <>
@@ -198,82 +155,6 @@ export default function Sidebar({
             })}
           </nav>
         </div>
-
-        {/* Dynamic Context Area (Query History) */}
-        {isQueryPage && (
-          <div className="flex-1 flex flex-col overflow-hidden border-t border-white/5">
-            {!isCollapsed && (
-              <div className="px-4 py-3 shrink-0">
-                <Link
-                  href="/query"
-                  className="flex items-center gap-2 w-full px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl transition-all shadow-inner font-medium text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  New Chat
-                </Link>
-              </div>
-            )}
-
-            <div className={`flex-1 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-3'} py-2 space-y-1 custom-scrollbar`}>
-              {!isCollapsed && (
-                <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2 ml-2 mt-1">
-                  Recent queries
-                </h3>
-              )}
-
-              {!isCollapsed && sessions.length === 0 && (
-                <div className="text-center p-4 text-gray-600 text-xs mt-4">
-                  No chat history yet.
-                </div>
-              )}
-
-              {sessions.map((session) => (
-                <Link
-                  key={session.id}
-                  href={`/query?id=${session.id}`}
-                  className={`flex items-center group rounded-xl cursor-pointer transition-all border
-                    ${isCollapsed ? 'justify-center p-2.5 mx-auto w-10' : 'justify-between px-3 py-2.5'}
-                    bg-transparent border-transparent hover:bg-white/5 text-gray-400 hover:text-gray-200
-                  `}
-                  title={isCollapsed ? session.title : undefined}
-                >
-                  <div className="flex items-center gap-3 overflow-hidden flex-1">
-                    <ChatIcon className="w-4 h-4 shrink-0 opacity-70" />
-
-                    {!isCollapsed && (
-                      editingId === session.id ? (
-                        <input
-                          autoFocus
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          onBlur={(e) => saveEditing(session.id, e as unknown as React.MouseEvent)}
-                          onKeyDown={(e) => e.key === 'Enter' && saveEditing(session.id, e as unknown as React.MouseEvent)}
-                          className="bg-[#0B0F17] text-sm text-white px-2 py-0.5 rounded outline-none w-full border border-blue-500/50"
-                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-                        />
-                      ) : (
-                        <span className="text-sm truncate font-medium">
-                          {session.title}
-                        </span>
-                      )
-                    )}
-                  </div>
-
-                  {!isCollapsed && editingId !== session.id && (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => startEditing(session, e)} className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={(e) => handleDeleteSession(session.id, e)} className="p-1 rounded hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Footer Toggle */}
         <div className={`mt-auto p-4 shrink-0 flex border-t border-white/5 ${isCollapsed ? 'justify-center' : 'justify-end'}`}>

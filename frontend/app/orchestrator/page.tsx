@@ -10,6 +10,7 @@ import { runOrchestratorAuto, runOrchestratorWorkflow, listWorkflows, getPolicie
 import { useTheme } from '@/context/ThemeContext';
 import { ReportButton } from '@/components/reports/ReportGenerator';
 import { Policy } from '@/types/policy';
+import ResponseRenderer from '@/components/shared/ResponseRenderer';
 
 interface Workflow {
   type: string;
@@ -71,8 +72,8 @@ export default function OrchestratorPage() {
   useEffect(() => {
     listWorkflows()
       .then((d) => setWorkflows((d as { workflows: Workflow[] }).workflows || []))
-      .catch(() => {});
-    getPolicies().then(setPolicies).catch(() => {});
+      .catch(() => { });
+    getPolicies().then(setPolicies).catch(() => { });
   }, []);
 
   const handleRun = async () => {
@@ -271,7 +272,7 @@ export default function OrchestratorPage() {
                 <ReportButton result={result} agentName="Orchestrator" title="Orchestrator Workflow Report" query={query} />
               </div>
               <div className="p-5 overflow-auto max-h-[500px] custom-scrollbar">
-                <OrchestratorResultRenderer data={result} />
+                <ResponseRenderer data={result} />
               </div>
             </div>
           )}
@@ -333,61 +334,3 @@ export default function OrchestratorPage() {
   );
 }
 
-function OrchestratorResultRenderer({ data }: { data: OrchestratorResult }) {
-  const agentsUsed: string[] = (data?.agents_used || data?.agents_executed || []);
-  const results = data?.results || data?.agent_results;
-  const finalAnswer = data?.final_answer || data?.synthesis;
-
-  return (
-    <div className="space-y-4">
-      {agentsUsed.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Agents Executed</p>
-          <div className="flex flex-wrap gap-2">
-            {agentsUsed.map(a => (
-              <span key={a} className="text-xs px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">
-                ✓ {a}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {finalAnswer && (
-        <div>
-          <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Final Answer</p>
-          <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-sm text-gray-200 whitespace-pre-wrap">
-            {String(finalAnswer)}
-          </div>
-        </div>
-      )}
-
-      {results && typeof results === 'object' && (
-        <div>
-          <p className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Agent Results</p>
-          <div className="space-y-2">
-            {Object.entries(results as Record<string, unknown>).map(([agent, res]) => (
-              <details key={agent} className="rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                <summary className="px-4 py-3 text-sm font-medium text-gray-300 cursor-pointer hover:bg-white/5 flex items-center gap-2">
-                  <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
-                  {agent.replace(/_/g, ' ')}
-                </summary>
-                <div className="px-4 pb-3">
-                  <pre className="text-xs text-gray-400 whitespace-pre-wrap overflow-auto">
-                    {typeof res === 'string' ? res : JSON.stringify(res, null, 2)}
-                  </pre>
-                </div>
-              </details>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!agentsUsed.length && !finalAnswer && !results && (
-        <pre className="text-xs text-gray-300 whitespace-pre-wrap">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      )}
-    </div>
-  );
-}

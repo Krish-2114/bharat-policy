@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Policy } from '@/types/policy';
 import ClauseViewer from './ClauseViewer';
-import { X, ExternalLink, Sparkles, Trash2, FileText, UploadCloud } from 'lucide-react';
+import { X, ExternalLink, Sparkles, Trash2, FileText, UploadCloud, Bot } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
@@ -117,14 +117,14 @@ export default function PolicyTable({ policies, loading, onDelete }: PolicyTable
                           <span>View</span>
                         </Button>
 
-                        <Link href={`/query?prompt=Ask about ${policy.title}`}>
+                        <Link href={`/agents`}>
                           <Button
                             variant="primary"
                             className="!h-8 !px-3 text-xs shadow-sm bg-cyan-600 hover:bg-cyan-500 border-none"
-                            title="Query Policy"
+                            title="Analyze with AI Agents"
                           >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>Query</span>
+                            <Bot className="w-3.5 h-3.5 mr-1" />
+                            <span>Analyze</span>
                           </Button>
                         </Link>
 

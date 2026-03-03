@@ -4,13 +4,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   FileSearch, Scale, ArrowLeftRight, Search, AlertTriangle,
   FlaskConical, PenLine, Users, Zap, Network, Loader2,
-  ChevronRight, Play, RotateCcw, Copy, CheckCheck, UploadCloud
+  ChevronRight, Play, RotateCcw, Copy, CheckCheck, UploadCloud,
+  ArrowLeft, Cpu, Sparkles
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { runAgent, getPolicies, uploadPolicy } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { useTheme } from '@/context/ThemeContext';
 import { ReportButton } from '@/components/reports/ReportGenerator';
 import { Policy } from '@/types/policy';
+import ResponseRenderer from '@/components/shared/ResponseRenderer';
 
 interface AgentField {
   key: string;
@@ -23,7 +26,6 @@ interface AgentField {
 interface Agent {
   id: string;
   name: string;
-  emoji: string;
   icon: React.ElementType;
   color: string;
   description: string;
@@ -34,7 +36,6 @@ const AGENTS: Agent[] = [
   {
     id: 'analyze',
     name: 'Policy Analyst',
-    emoji: '📄',
     icon: FileSearch,
     color: 'blue',
     description: 'Summarize policy, extract obligations, deadlines, penalties, stakeholders.',
@@ -46,7 +47,6 @@ const AGENTS: Agent[] = [
   {
     id: 'compliance',
     name: 'Compliance Evaluation',
-    emoji: '⚖️',
     icon: Scale,
     color: 'amber',
     description: 'Evaluate if a scenario violates policy. Returns verdict + risk level.',
@@ -58,7 +58,6 @@ const AGENTS: Agent[] = [
   {
     id: 'compare',
     name: 'Policy Comparison',
-    emoji: '🔄',
     icon: ArrowLeftRight,
     color: 'cyan',
     description: 'Compare two policies side by side.',
@@ -70,7 +69,6 @@ const AGENTS: Agent[] = [
   {
     id: 'gap-analysis',
     name: 'Gap Analysis',
-    emoji: '🔎',
     icon: Search,
     color: 'purple',
     description: 'Find missing compliance areas, undefined responsibilities, weak enforcement.',
@@ -82,7 +80,6 @@ const AGENTS: Agent[] = [
   {
     id: 'risk',
     name: 'Risk Assessment',
-    emoji: '🚨',
     icon: AlertTriangle,
     color: 'red',
     description: 'Score ambiguity, enforcement weakness, financial exposure, operational risk.',
@@ -94,7 +91,6 @@ const AGENTS: Agent[] = [
   {
     id: 'simulate',
     name: 'Impact Simulation',
-    emoji: '🧪',
     icon: FlaskConical,
     color: 'emerald',
     description: 'Simulate what happens if a policy change is made.',
@@ -106,7 +102,6 @@ const AGENTS: Agent[] = [
   {
     id: 'amend',
     name: 'Amendment Drafting',
-    emoji: '✏️',
     icon: PenLine,
     color: 'violet',
     description: 'Suggest improved clause wording and stronger compliance language.',
@@ -118,7 +113,6 @@ const AGENTS: Agent[] = [
   {
     id: 'stakeholders',
     name: 'Stakeholder Impact',
-    emoji: '👥',
     icon: Users,
     color: 'orange',
     description: 'Analyze impact on employees, government, vendors, and citizens.',
@@ -130,7 +124,6 @@ const AGENTS: Agent[] = [
   {
     id: 'conflicts',
     name: 'Conflict Detection',
-    emoji: '⚡',
     icon: Zap,
     color: 'yellow',
     description: 'Detect contradictions and logical inconsistencies between clauses.',
@@ -141,7 +134,6 @@ const AGENTS: Agent[] = [
   {
     id: 'knowledge-graph',
     name: 'Knowledge Graph',
-    emoji: '🕸️',
     icon: Network,
     color: 'teal',
     description: 'Build dependency graph and cross-reference map of all clauses.',
@@ -165,8 +157,7 @@ const colorMap: Record<string, string> = {
 };
 
 export default function AgentsPage() {
-  const { isDark } = useTheme();
-  const [selectedAgent, setSelectedAgent] = useState(AGENTS[0]);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Record<string, unknown> | string | null>(null);
@@ -179,8 +170,7 @@ export default function AgentsPage() {
   const [uploadKey, setUploadKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const firstPolicyFieldKey = selectedAgent.fields.find((f) => f.type === 'policy_select')?.key;
-  const hasPolicyField = !!firstPolicyFieldKey;
+  const firstPolicyFieldKey = selectedAgent?.fields.find((f) => f.type === 'policy_select')?.key;
   const UPLOAD_FROM_DEVICE_VALUE = '__upload_from_device__';
 
   const handleSelectFileClick = () => {
@@ -196,10 +186,10 @@ export default function AgentsPage() {
   };
 
   useEffect(() => {
-    getPolicies().then(setPolicies).catch(() => {});
+    getPolicies().then(setPolicies).catch(() => { });
   }, []);
 
-  const refreshPolicies = () => getPolicies().then(setPolicies).catch(() => {});
+  const refreshPolicies = () => getPolicies().then(setPolicies).catch(() => { });
 
   const handleUploadDocument = async () => {
     if (!uploadFile || !uploadTitle.trim()) {
@@ -224,7 +214,7 @@ export default function AgentsPage() {
     }
   };
 
-  const handleAgentSelect = (agent: typeof AGENTS[0]) => {
+  const handleAgentSelect = (agent: Agent) => {
     setSelectedAgent(agent);
     setFormValues({});
     setResult(null);
@@ -232,9 +222,19 @@ export default function AgentsPage() {
   };
 
   const handleRun = async () => {
+    if (!selectedAgent) return;
     setLoading(true);
     setError(null);
     setResult(null);
+
+    // Validation
+    for (const field of selectedAgent.fields) {
+      if (field.required && !formValues[field.key]) {
+        toast.error(`Please provide a ${field.label.toLowerCase()}`);
+        setLoading(false);
+        return;
+      }
+    }
 
     // Build payload
     const payload: Record<string, unknown> = {};
@@ -265,235 +265,279 @@ export default function AgentsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const colors = colorMap[selectedAgent.color];
+  const colors = selectedAgent ? colorMap[selectedAgent.color] : '';
   const colorParts = colors.split(' ');
   const textColor = colorParts[2];
   const bgColor = colorParts[3];
 
   return (
     <div className="flex flex-col gap-6 h-full w-full max-w-7xl mx-auto px-4 md:px-8 py-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-white tracking-tight">🤖 Agent Playground</h1>
-        <p className="text-sm text-gray-400">Run individual AI agents directly against your policy documents.</p>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
-        {/* Agent List */}
-        <div className="lg:w-72 shrink-0">
-          <div className="rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">10 Specialized Agents</p>
+      <AnimatePresence mode="wait">
+        {!selectedAgent ? (
+          <motion.div
+            key="grid"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="space-y-8"
+          >
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <Cpu className="w-5 h-5 text-blue-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Agent Playground</h1>
+              </div>
+              <p className="text-sm text-gray-400 max-w-2xl">
+                Choose a specialized AI agent to perform deep analysis on your policy documents.
+                Each agent is optimized for a specific investigative task.
+              </p>
             </div>
-            <div className="overflow-y-auto max-h-[70vh] custom-scrollbar">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {AGENTS.map((agent) => {
-                const isActive = selectedAgent.id === agent.id;
                 const c = colorMap[agent.color].split(' ');
                 return (
-                  <button
+                  <motion.button
                     key={agent.id}
+                    whileHover={{ scale: 1.02, y: -4 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => handleAgentSelect(agent)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 transition-all border-b border-white/5 text-left group
-                      ${isActive ? 'bg-white/5' : 'hover:bg-white/5'}`}
+                    className="flex flex-col text-left p-6 rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/5 hover:border-white/20 transition-all group relative overflow-hidden shadow-xl shadow-black/20"
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isActive ? c[3] : 'bg-white/5'}`}>
-                      <agent.icon className={`w-4 h-4 ${isActive ? c[2] : 'text-gray-500'}`} />
+                    {/* Ambient glow */}
+                    <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-[40px] opacity-20 transition-opacity group-hover:opacity-40 ${c[3]}`} />
+
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${c[3]} border ${c[1]}`}>
+                      <agent.icon className={`w-6 h-6 ${c[2]}`} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
-                        {agent.emoji} {agent.name}
-                      </p>
+
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                      {agent.name}
+                    </h3>
+
+                    <p className="text-sm text-gray-400 leading-relaxed mb-6 flex-1">
+                      {agent.description}
+                    </p>
+
+                    <div className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-widest gap-2 group-hover:text-white transition-colors">
+                      Activate Agent <ChevronRight className="w-4 h-4" />
                     </div>
-                    {isActive && <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />}
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
-          </div>
-        </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="runner"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex flex-col gap-6"
+          >
+            {/* Breadcrumb / Back */}
+            <button
+              onClick={() => setSelectedAgent(null)}
+              className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors w-fit group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              Back to Agents
+            </button>
 
-        {/* Agent Runner */}
-        <div className="flex-1 flex flex-col gap-4 min-w-0">
-          {/* Agent Header */}
-          <div className={`rounded-2xl bg-gradient-to-br ${colorParts[0]} border ${colorParts[1]} p-5 shadow-xl`}>
-            <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center shrink-0`}>
-                <selectedAgent.icon className={`w-6 h-6 ${textColor}`} />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">{selectedAgent.emoji} {selectedAgent.name}</h2>
-                <p className="text-sm text-gray-400 mt-0.5">{selectedAgent.description}</p>
-              </div>
-            </div>
-          </div>
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Left Column: Form */}
+              <div className="flex-1 space-y-4">
+                {/* Agent Header */}
+                <div className={`rounded-2xl bg-gradient-to-br ${colorParts[0]} border ${colorParts[1]} p-6 shadow-xl`}>
+                  <div className="flex items-start gap-5">
+                    <div className={`w-14 h-14 rounded-2xl ${bgColor} border ${colorParts[1]} flex items-center justify-center shrink-0 shadow-inner`}>
+                      <selectedAgent.icon className={`w-7 h-7 ${textColor}`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h2 className="text-xl font-bold text-white">{selectedAgent.name}</h2>
+                        <Sparkles className={`w-4 h-4 ${textColor} opacity-50`} />
+                      </div>
+                      <p className="text-sm text-gray-400 leading-relaxed">{selectedAgent.description}</p>
+                    </div>
+                  </div>
+                </div>
 
-          {/* Input Form */}
-          <div className="rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl p-5 space-y-4">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.txt"
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-            <h3 className="text-sm font-semibold text-gray-300">Input Parameters</h3>
-            {selectedAgent.fields.map((field) => (
-              <div key={field.key} className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-400">{field.label}</label>
-                {field.type === 'textarea' ? (
-                  <textarea
-                    value={formValues[field.key] || ''}
-                    onChange={(e) => setFormValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                    placeholder={field.placeholder || ''}
-                    rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40 transition-all resize-none"
+                {/* Input Form */}
+                <div className="rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl p-6 space-y-6">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.txt"
+                    className="hidden"
+                    onChange={handleFileInputChange}
                   />
-                ) : field.type === 'policy_select' ? (
-                  <select
-                    value={formValues[field.key] === UPLOAD_FROM_DEVICE_VALUE ? '' : (formValues[field.key] || '')}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v === UPLOAD_FROM_DEVICE_VALUE) {
-                        handleSelectFileClick();
-                        setFormValues(prev => ({ ...prev, [field.key]: '' }));
-                      } else {
-                        setFormValues(prev => ({ ...prev, [field.key]: v }));
-                      }
-                    }}
-                    className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
-                  >
-                    <option value="">— Select a policy (optional) —</option>
-                    <option value={UPLOAD_FROM_DEVICE_VALUE}>Select from device</option>
-                    {policies.map(p => (
-                      <option key={p.id} value={p.id}>{p.id}: {p.title}</option>
+
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      Parameters
+                    </h3>
+
+                    {selectedAgent.fields.map((field) => (
+                      <div key={field.key} className="space-y-2">
+                        <label className="text-[13px] font-medium text-gray-300 flex items-center gap-2">
+                          {field.label}
+                          {field.required && <span className="text-red-500/50 text-[10px] uppercase font-bold">Required</span>}
+                        </label>
+                        {field.type === 'textarea' ? (
+                          <textarea
+                            value={formValues[field.key] || ''}
+                            onChange={(e) => setFormValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                            placeholder={field.placeholder || ''}
+                            rows={4}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40 transition-all resize-none shadow-inner"
+                          />
+                        ) : field.type === 'policy_select' ? (
+                          <select
+                            value={formValues[field.key] === UPLOAD_FROM_DEVICE_VALUE ? '' : (formValues[field.key] || '')}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === UPLOAD_FROM_DEVICE_VALUE) {
+                                handleSelectFileClick();
+                                setFormValues(prev => ({ ...prev, [field.key]: '' }));
+                              } else {
+                                setFormValues(prev => ({ ...prev, [field.key]: v }));
+                              }
+                            }}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500/40 transition-all cursor-pointer"
+                          >
+                            <option value="" className="bg-[#0c0414]">Select a policy document</option>
+                            <option value={UPLOAD_FROM_DEVICE_VALUE} className="bg-[#0c0414]">Upload new document...</option>
+                            {policies.map(p => (
+                              <option key={p.id} value={p.id} className="bg-[#0c0414]">{p.title}</option>
+                            ))}
+                          </select>
+                        ) : null}
+                      </div>
                     ))}
-                  </select>
-                ) : null}
+                  </div>
+
+                  {uploadFile && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-wrap items-center gap-2 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20"
+                    >
+                      <div className="flex items-center gap-2 shrink-0">
+                        <UploadCloud className="w-4 h-4 text-blue-400" />
+                        <span className="text-xs text-gray-300 truncate max-w-[120px]">{uploadFile.name}</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={uploadTitle}
+                        onChange={(e) => setUploadTitle(e.target.value)}
+                        placeholder="Policy title"
+                        disabled={uploadLoading}
+                        className="flex-1 min-w-[140px] bg-[#0c0414] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleUploadDocument}
+                        disabled={uploadLoading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-blue-500 text-white border border-blue-600 hover:bg-blue-400 disabled:opacity-50 transition-colors"
+                      >
+                        {uploadLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Confirm Upload'}
+                      </button>
+                    </motion.div>
+                  )}
+
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      onClick={handleRun}
+                      disabled={loading}
+                      className={`flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold transition-all shadow-lg
+                        ${bgColor} ${textColor} hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed border ${colorParts[1]} ring-1 ring-white/5`}
+                    >
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
+                      {loading ? 'Analyzing Policy...' : 'Run Analysis'}
+                    </button>
+                    <button
+                      onClick={() => { setFormValues({}); setResult(null); setError(null); }}
+                      className="p-3.5 rounded-xl text-gray-400 border border-white/10 hover:bg-white/5 transition-all hover:text-white"
+                      title="Reset parameters"
+                    >
+                      <RotateCcw className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            ))}
 
-            {uploadFile && (
-              <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <span className="text-sm text-gray-300 truncate max-w-[180px]">{uploadFile.name}</span>
-                <input
-                  type="text"
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  placeholder="Policy title"
-                  disabled={uploadLoading}
-                  className="flex-1 min-w-[140px] bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:ring-2 focus:ring-blue-500/40"
-                />
-                <button
-                  type="button"
-                  onClick={handleUploadDocument}
-                  disabled={uploadLoading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 disabled:opacity-50"
-                >
-                  {uploadLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
-                  {uploadLoading ? 'Uploading…' : 'Upload'}
-                </button>
-              </div>
-            )}
+              {/* Right Column: Result */}
+              <div className="flex-1 min-w-0">
+                {!result && !error && !loading && (
+                  <div className="h-full min-h-[400px] flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/5 bg-white/[0.02] text-center p-8">
+                    <div className={`p-4 rounded-full ${bgColor} border ${colorParts[1]} mb-4 opacity-50`}>
+                      <selectedAgent.icon className={`w-8 h-8 ${textColor}`} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">Ready to Analyze</h3>
+                    <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
+                      Fill in the parameters and click run to see the AI agent's specialized insights.
+                    </p>
+                  </div>
+                )}
 
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={handleRun}
-                disabled={loading}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg
-                  ${bgColor} ${textColor} hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed border ${colorParts[1]}`}
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                {loading ? 'Running...' : 'Run Agent'}
-              </button>
-              <button
-                onClick={() => { setFormValues({}); setResult(null); setError(null); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-gray-400 border border-white/10 hover:bg-white/5 transition-all"
-              >
-                <RotateCcw className="w-4 h-4" /> Reset
-              </button>
-            </div>
-          </div>
+                {loading && (
+                  <div className="h-full min-h-[400px] flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#0c0414]/80 backdrop-blur-xl text-center p-8">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-6" />
+                    <h3 className="text-lg font-semibold text-white mb-2">Processing Document</h3>
+                    <p className="text-sm text-gray-500 max-w-xs leading-relaxed animate-pulse">
+                      Retrieving context and running semantic evaluation...
+                    </p>
+                  </div>
+                )}
 
-          {/* Result */}
-          {error && (
-            <div className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400">
-              ⚠️ {error}
-            </div>
-          )}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="rounded-2xl bg-red-500/10 border border-red-500/20 p-6 text-sm text-red-400 shadow-xl"
+                  >
+                    <div className="flex items-center gap-2 font-bold mb-2 uppercase tracking-widest text-xs">
+                      Error Encountered
+                    </div>
+                    <p className="leading-relaxed">{error}</p>
+                  </motion.div>
+                )}
 
-          {result && (
-            <div className="rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
-                <h3 className="text-sm font-semibold text-gray-300">Agent Response</h3>
-                <button
-                  onClick={handleCopy}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
-                >
-                  {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied!' : 'Copy JSON'}
-                </button>
                 {result && (
-                  <ReportButton result={result} agentName={selectedAgent.name} title={`${selectedAgent.name} Analysis`} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl bg-[#0c0414]/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden h-full flex flex-col"
+                  >
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/[0.02]">
+                      <h3 className="text-sm font-bold text-gray-300 uppercase tracking-widest flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                        Analysis Report
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleCopy}
+                          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-all px-3 py-1.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10"
+                        >
+                          {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copied ? 'Copied' : 'JSON'}
+                        </button>
+                        <ReportButton result={result} agentName={selectedAgent.name} title={`${selectedAgent.name} Analysis`} />
+                      </div>
+                    </div>
+                    <div className="p-6 overflow-auto custom-scrollbar flex-1 max-h-[70vh]">
+                      <ResponseRenderer data={result} />
+                    </div>
+                  </motion.div>
                 )}
               </div>
-              <div className="p-5 overflow-auto max-h-[400px] custom-scrollbar">
-                <ResultRenderer data={result} />
-              </div>
             </div>
-          )}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function ResultRenderer({ data }: { data: Record<string, unknown> | string | null }) {
-  if (typeof data === 'string') {
-    return <p className="text-sm text-gray-200 whitespace-pre-wrap">{data}</p>;
-  }
-
-  if (typeof data === 'object' && data !== null) {
-    const obj = data as Record<string, unknown>;
-
-    // Try to show 'answer', 'result', 'analysis', etc. as a nicely formatted section
-    const textFields = ['answer', 'result', 'analysis', 'summary', 'verdict', 'amendment', 'simulation_result', 'conflict_report', 'graph'];
-    const mainText = textFields.map(k => obj[k]).find(v => typeof v === 'string');
-
-    if (mainText) {
-      return (
-        <div className="space-y-4">
-          <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{mainText}</div>
-          {obj.confidence !== undefined && (
-            <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-              <span className="text-xs text-gray-500">Confidence</span>
-              <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full transition-all"
-                  style={{ width: `${Math.round((obj.confidence as number) * 100)}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-300">{Math.round((obj.confidence as number) * 100)}%</span>
-            </div>
-          )}
-          {Object.entries(obj)
-            .filter(([k]) => !textFields.includes(k) && k !== 'confidence')
-            .length > 0 && (
-            <details className="mt-2">
-              <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300">Show full JSON</summary>
-              <pre className="mt-2 text-xs text-gray-400 bg-white/5 rounded-xl p-4 overflow-auto">
-                {JSON.stringify(obj, null, 2)}
-              </pre>
-            </details>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <pre className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">
-        {JSON.stringify(data, null, 2)}
-      </pre>
-    );
-  }
-
-  return <p className="text-sm text-gray-400">{String(data)}</p>;
-}

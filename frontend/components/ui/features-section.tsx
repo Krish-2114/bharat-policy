@@ -19,9 +19,9 @@ const items: CardStackItem[] = [
   },
   {
     id: 3,
-    title: "Ask Questions. Get Verified Answers.",
-    subtitle: "Query policies using natural language.",
-    description: "Instead of manually reading hundreds of pages, simply ask questions like: \"What are telecom compliance requirements?\" The AI retrieves relevant clauses, provides contextual answers, and cites exact policy sections for full transparency.",
+    title: "Deep Policy Insights & Analysis",
+    subtitle: "Extract intelligence using advanced AI agents.",
+    description: "Instead of manually reading hundreds of pages, utilize specialized AI agents to analyze policies for gaps, risks, and compliance. Get human-readable summaries and deep structural insights with exact clause citations for full transparency.",
     imageSrc: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800&auto=format&fit=crop",
   },
   {
