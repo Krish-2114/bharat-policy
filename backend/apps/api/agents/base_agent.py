@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ── Confidence thresholds ─────────────────────────────────────────────
 CONFIDENCE_HIGH = 0.75
 CONFIDENCE_MEDIUM = 0.55
-CONFIDENCE_LOW = 0.35   # below this → insufficient info fallback
+CONFIDENCE_LOW = 0.10   # below this → insufficient info fallback
 
 # ── Guardrail prompt suffix (appended to every prompt) ───────────────
 GUARDRAIL_SUFFIX = """
