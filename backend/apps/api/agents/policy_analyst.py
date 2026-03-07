@@ -82,11 +82,7 @@ class PolicyAnalystAgent(BaseAgent):
             trace.mark_llm_start(prompt)
 
             # Deterministic generation for governance systems
-            raw, in_tok, out_tok = self.call_llm(
-                prompt,
-                max_tokens=2048,
-                temperature=0.0,
-            )
+            raw, in_tok, out_tok = self.call_llm(prompt, max_tokens=2048)
 
             trace.mark_llm_end(raw)
 
@@ -115,10 +111,10 @@ class PolicyAnalystAgent(BaseAgent):
             # --------------------------------------------------
             # 4. Compute Final Composite Confidence
             # --------------------------------------------------
-            confidence = self.compute_final_confidence(
-                avg_score=avg_score,
+            confidence = self.compute_confidence(
+                avg_retrieval_score=avg_score,
                 clause_count=len(clauses),
-                sufficient=has_sufficient_info,
+                has_sufficient_info=has_sufficient_info,
             )
 
             result["confidence"] = confidence
